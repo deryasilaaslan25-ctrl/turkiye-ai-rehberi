@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Türkiye Şehir Rehberi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Inter:wght@300;400;500;600&display=swap"/>
+<style>
+  :root {
+    --ink:    #1a1a2e;
+    --paper:  #f7f3ec;
+    --sand:   #e8dfc8;
+    --tile:   #c8432a;
+    --turq:   #1a6b6b;
+    --gold:   #c49a3c;
+    --mist:   #f0ebe0;
+    --radius: 16px;
+    --gap:    24px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--ink);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px; height: 60px;
+  }
+  .nav-logo {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem;
+    color: var(--paper); letter-spacing: -.5px;
+  }
+  .nav-logo span { color: var(--gold); }
+  .nav-links { display: flex; gap: 8px; }
+  .nav-links button {
+    background: none; border: none; color: #aaa;
+    font-family: 'Inter', sans-serif; font-size: .85rem;
+    cursor: pointer; padding: 6px 12px; border-radius: 6px;
+    transition: color .2s, background .2s;
+  }
+  .nav-links button:hover, .nav-links button.active {
+    color: var(--paper); background: rgba(255,255,255,.08);
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--ink);
+    padding: 80px 32px 60px;
+    text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 50% at 50% 100%, rgba(196,154,60,.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(196,154,60,.15); border: 1px solid rgba(196,154,60,.3);
+    color: var(--gold); font-size: .78rem; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 6px 16px; border-radius: 999px;
+    margin-bottom: 28px;
+  }
+  .hero h1 {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: clamp(2rem, 5vw, 3.6rem); line-height: 1.1;
+    color: var(--paper); max-width: 700px; margin: 0 auto 20px;
+  }
+  .hero h1 em { color: var(--gold); font-style: normal; }
+  .hero p {
+    color: #aaa; font-size: 1.05rem; max-width: 520px;
+    margin: 0 auto 36px; line-height: 1.7;
+  }
+  .hero-cta {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--tile); color: #fff;
+    font-weight: 600; font-size: 1rem;
+    padding: 14px 32px; border-radius: 999px; border: none; cursor: pointer;
+    transition: transform .2s, box-shadow .2s;
+  }
+  .hero-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(200,67,42,.35); }
+  .hero-stats {
+    display: flex; justify-content: center; gap: 40px; margin-top: 60px;
+    flex-wrap: wrap;
+  }
+  .stat { text-align: center; }
+  .stat-n {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2rem;
+    color: var(--paper);
+  }
+  .stat-n span { color: var(--gold); }
+  .stat-l { color: #666; font-size: .82rem; margin-top: 2px; }
+
+  /* ── SECTIONS ── */
+  .section { display: none; padding: 48px 24px; max-width: 900px; margin: 0 auto; }
+  .section.active { display: block; }
+
+  .section-title {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.7rem;
+    margin-bottom: 8px;
+  }
+  .section-sub { color: #888; font-size: .95rem; margin-bottom: 32px; }
+
+  /* ── CITY GRID ── */
+  .city-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px; margin-bottom: 32px;
+  }
+  .city-card {
+    background: var(--sand); border-radius: var(--radius);
+    padding: 20px 16px; cursor: pointer; transition: all .2s;
+    border: 2px solid transparent; position: relative; overflow: hidden;
+  }
+  .city-card::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(196,154,60,.1) 0%, transparent 60%);
+    opacity: 0; transition: opacity .2s;
+  }
+  .city-card:hover::before { opacity: 1; }
+  .city-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+  .city-card.selected { border-color: var(--tile); background: #fdf0ed; }
+  .city-icon { font-size: 2rem; margin-bottom: 8px; }
+  .city-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; }
+  .city-tag { font-size: .75rem; color: #888; margin-top: 4px; }
+
+  /* ── QUIZ ── */
+  .quiz-step { display: none; }
+  .quiz-step.active { display: block; }
+  .quiz-question {
+    font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 700;
+    margin-bottom: 20px; line-height: 1.4;
+  }
+  .quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .quiz-opt {
+    background: var(--sand); border: 2px solid transparent;
+    border-radius: var(--radius); padding: 16px; cursor: pointer;
+    transition: all .2s; font-size: .9rem; line-height: 1.4;
+  }
+  .quiz-opt:hover { border-color: var(--turq); background: #e8f4f4; }
+  .quiz-opt.selected { border-color: var(--tile); background: #fdf0ed; }
+  .quiz-opt .opt-icon { font-size: 1.5rem; margin-bottom: 6px; display: block; }
+  .quiz-progress {
+    display: flex; gap: 6px; margin-bottom: 24px;
+  }
+  .quiz-dot {
+    height: 4px; flex: 1; background: var(--sand); border-radius: 2px;
+    transition: background .3s;
+  }
+  .quiz-dot.done { background: var(--tile); }
+
+  /* ── MISSIONS ── */
+  .missions-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .mission-card {
+    background: var(--sand); border-radius: var(--radius); padding: 20px;
+    border-left: 4px solid var(--turq); position: relative;
+  }
+  .mission-card.gold { border-left-color: var(--gold); }
+  .mission-card.red  { border-left-color: var(--tile); }
+  .mission-badge {
+    position: absolute; top: 16px; right: 16px;
+    background: var(--ink); color: var(--gold);
+    font-size: .7rem; font-weight: 700; padding: 4px 8px; border-radius: 6px;
+  }
+  .mission-icon { font-size: 1.8rem; margin-bottom: 8px; }
+  .mission-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+  .mission-desc { font-size: .82rem; color: #666; line-height: 1.5; }
+  .mission-pts { margin-top: 12px; font-size: .8rem; font-weight: 600; color: var(--turq); }
+
+  /* ── LIVE STATUS ── */
+  .status-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px; margin-bottom: 32px;
+  }
+  .status-card {
+    background: var(--sand); border-radius: var(--radius); padding: 16px;
+    text-align: center;
+  }
+  .status-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 6px;
+  }
+  .status-dot.green { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+  .status-dot.yellow { background: #eab308; box-shadow: 0 0 6px #eab308; }
+  .status-dot.red { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+  .status-label { font-size: .8rem; font-weight: 600; }
+  .status-value { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.4rem; margin-top: 4px; }
+  .status-unit { font-size: .75rem; color: #888; }
+
+  /* ── REELS ── */
+  .reels-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin-bottom: 28px;
+  }
+  @media(max-width: 600px) { .reels-grid { grid-template-columns: 1fr 1fr; } }
+  .reel-card {
+    aspect-ratio: 9/16; max-height: 220px;
+    background: linear-gradient(160deg, var(--turq), var(--ink));
+    border-radius: 12px; display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-end; padding: 14px;
+    cursor: pointer; transition: transform .2s;
+    border: 2px solid transparent;
+  }
+  .reel-card:hover { transform: scale(1.03); }
+  .reel-card.selected { border-color: var(--gold); }
+  .reel-emoji { font-size: 2rem; margin-bottom: auto; margin-top: 20px; }
+  .reel-label { color: #fff; font-size: .78rem; font-weight: 600; text-align: center; }
+  .reel-dur { color: rgba(255,255,255,.6); font-size: .7rem; margin-top: 2px; }
+
+  /* ── SUSTAINABILITY ── */
+  .eco-score-ring {
+    display: flex; align-items: center; gap: 24px; margin-bottom: 32px;
+    background: var(--sand); border-radius: var(--radius); padding: 24px;
+  }
+  .ring-wrap { position: relative; width: 100px; height: 100px; flex-shrink: 0; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-text {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .ring-text .big { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.6rem; }
+  .ring-text .small { font-size: .65rem; color: #888; }
+  .eco-criteria { flex: 1; }
+  .eco-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .eco-bar-wrap { flex: 1; height: 6px; background: #ddd; border-radius: 3px; }
+  .eco-bar { height: 100%; border-radius: 3px; background: var(--turq); transition: width 1s; }
+  .eco-label { width: 120px; font-size: .8rem; color: #666; }
+  .eco-pct { width: 36px; text-align: right; font-size: .8rem; font-weight: 600; }
+
+  /* ── AI OUTPUT ── */
+  .ai-box {
+    background: var(--ink); border-radius: var(--radius);
+    padding: 28px; margin-top: 24px; position: relative;
+  }
+  .ai-box-label {
+    position: absolute; top: -12px; left: 20px;
+    background: var(--tile); color: #fff; font-size: .72rem; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; padding: 4px 12px; border-radius: 6px;
+  }
+  .ai-box-content {
+    color: #e0e0e0; font-size: .92rem; line-height: 1.8; white-space: pre-wrap;
+  }
+  .ai-box-content .typing-cursor {
+    display: inline-block; width: 2px; height: 1em;
+    background: var(--gold); vertical-align: text-bottom; animation: blink .7s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Inter', sans-serif; font-weight: 600; font-size: .9rem;
+    padding: 12px 24px; border-radius: 999px; border: none; cursor: pointer;
+    transition: all .2s;
+  }
+  .btn-primary { background: var(--tile); color: #fff; }
+  .btn-primary:hover { background: #a8371f; transform: translateY(-1px); }
+  .btn-secondary {
+    background: var(--sand); color: var(--ink);
+    border: 1.5px solid #d0c8b8;
+  }
+  .btn-secondary:hover { background: var(--sand); border-color: var(--tile); }
+  .btn-turq { background: var(--turq); color: #fff; }
+  .btn-turq:hover { background: #145858; transform: translateY(-1px); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+
+  /* ── FORMS ── */
+  .field-group { margin-bottom: 16px; }
+  .field-label { font-size: .85rem; font-weight: 600; color: #555; margin-bottom: 6px; display: block; }
+  select, input[type=text], textarea {
+    width: 100%; padding: 12px 16px;
+    background: var(--sand); border: 1.5px solid #d0c8b8;
+    border-radius: 10px; font-family: 'Inter', sans-serif; font-size: .9rem;
+    color: var(--ink); outline: none; transition: border-color .2s;
+  }
+  select:focus, input:focus, textarea:focus { border-color: var(--turq); }
+  textarea { resize: vertical; min-height: 80px; }
+
+  /* ── LOADING ── */
+  .spinner {
+    display: inline-block; width: 20px; height: 20px;
+    border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+    border-radius: 50%; animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── PERSONA CARD ── */
+  .persona-card {
+    background: linear-gradient(135deg, var(--turq) 0%, var(--ink) 100%);
+    border-radius: var(--radius); padding: 28px; color: #fff; margin-top: 20px;
+  }
+  .persona-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.5rem; margin-bottom: 4px; }
+  .persona-sub { color: rgba(255,255,255,.7); font-size: .88rem; margin-bottom: 16px; }
+  .persona-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+  .persona-tag {
+    background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+    border-radius: 999px; padding: 4px 12px; font-size: .78rem; font-weight: 500;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--ink); color: #666; text-align: center;
+    padding: 32px; font-size: .8rem; margin-top: 60px;
+  }
+  footer strong { color: var(--paper); }
+
+  /* ── RESPONSIVE ── */
+  @media(max-width: 600px) {
+    nav { padding: 0 16px; }
+    .hero { padding: 60px 16px 40px; }
+    .quiz-options { grid-template-columns: 1fr; }
+    .section { padding: 32px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">🗺 <span>Türkiye</span> Akıllı Rehber</div>
+  <div class="nav-links">
+    <button class="active" onclick="showSection('home',this)">Ana Sayfa</button>
+    <button onclick="showSection('quiz',this)">Kişilik Testi</button>
+    <button onclick="showSection('routes',this)">Rotalar</button>
+    <button onclick="showSection('missions',this)">Görevler</button>
+    <button onclick="showSection('live',this)">Anlık Durum</button>
+    <button onclick="showSection('reels',this)">Reels Rotası</button>
+    <button onclick="showSection('eco',this)">Sürdürülebilirlik</button>
+  </div>
+</nav>
+
+<div id="sec-home" class="section active" style="max-width:100%;padding:0">
+  <div class="hero">
+    <div class="hero-eyebrow">✨ Türkiye'nin İlk · Akıllı Şehir Rehberi</div>
+    <h1>Türkiye'yi<br/><em>Senin Tarzında</em> Keşfet</h1>
+    <p>Akıllı algoritmamız kişiliğini analiz eder, zenginleştirilmiş yerel kişisel rotanı saniyeler içinde tamamen ücretsiz oluşturur.</p>
+    <button class="hero-cta" onclick="showSection('quiz', document.querySelector('.nav-links button:nth-child(2)'))">
+      Kişilik Testine Başla →
+    </button>
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-n">81<span>+</span></div><div class="stat-l">İl Kapsamı</div></div>
+      <div class="stat"><div class="stat-n">6</div><div class="stat-l">Özel Özellik</div></div>
+      <div class="stat"><div class="stat-n">∞</div><div class="stat-l">Benzersiz Rota</div></div>
+    </div>
+  </div>
+
+  <div style="max-width:900px;margin:0 auto;padding:48px 24px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px">
+      <div class="mission-card" onclick="showSection('quiz',document.querySelector('.nav-links button:nth-child(2)'))">
+        <div class="mission-icon">🧠</div>
+        <div class="mission-title">"Benim Tarzım" Kişilik Testi</div>
+        <div class="mission-desc">5 soruluk analiz ile seyahat kişiliğini keşfet, sana özel persona oluştur.</div>
+      </div>
+      <div class="mission-card gold" onclick="showSection('routes',document.querySelector('.nav-links button:nth-child(3)'))">
+        <div class="mission-icon">🗺️</div>
+        <div class="mission-title">Kişilik Bazlı Rota</div>
+        <div class="mission-desc">Şehir seç, tercihlerini belirt — sistem sana özel detaylı gezi planı üretsin.</div>
+      </div>
+      <div class="mission-card red" onclick="showSection('missions',document.querySelector('.nav-links button:nth-child(4)'))">
+        <div class="mission-icon">🎯</div>
+        <div class="mission-title">Gizli Görev Sistemi</div>
+        <div class="mission-desc">Her şehirde gizli görevler tamamla, rozetler kazan, liderlik tablosuna gir.</div>
+      </div>
+      <div class="mission-card" onclick="showSection('live',document.querySelector('.nav-links button:nth-child(5)'))">
+        <div class="mission-icon">⚡</div>
+        <div class="mission-title">Anlık Durum</div>
+        <div class="mission-desc">Hava ve kalabalık yoğunluğuna göre en güncel yerel önerileri al.</div>
+      </div>
+      <div class="mission-card gold" onclick="showSection('reels',document.querySelector('.nav-links button:nth-child(6)'))">
+        <div class="mission-icon">🎬</div>
+        <div class="mission-title">Reels Rotası</div>
+        <div class="mission-desc">İçerik üreticileri için çekim planı: konum, ışık, angle, caption önerileri.</div>
+      </div>
+      <div class="mission-card red" onclick="showSection('eco',document.querySelector('.nav-links button:nth-child(7)'))">
+        <div class="mission-icon">🌿</div>
+        <div class="mission-title">Sürdürülebilir Turizm Skoru</div>
+        <div class="mission-desc">Rotanın çevresel etki skoru, karbon hesabı ve eko-alternatif önerileri.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="sec-quiz" class="section">
+  <div class="section-title">🧠 "Benim Tarzım" Kişilik Testi</div>
+  <div class="section-sub">5 soru — seyahat personanı analiz edelim</div>
+
+  <div id="quizContainer">
+    <div class="quiz-progress" id="quizProgress">
+      <div class="quiz-dot"></div><div class="quiz-dot"></div><div class="quiz-dot"></div>
+      <div class="quiz-dot"></div><div class="quiz-dot"></div>
+    </div>
+
+    <div class="quiz-step active" data-step="0">
+      <div class="quiz-question">Sabah uyanıp şehre çıkıyorsun. İlk durak nerede olur?</div>
+      <div class="quiz-options">
+        <div class="quiz-opt" onclick="selectOpt(this,0)"><span class="opt-icon">🏛️</span>Tarihi çarşıda kahvaltı</div>
+        <div class="quiz-opt" onclick="selectOpt(this,1)"><span class="opt-icon">🌄</span>Doğada sabah yürüyüşü</div>
+        <div class="quiz-opt" onclick="selectOpt(this,2)"><span class="opt-icon">☕</span>Trendy kafede çalışma</div>
+        <div class="quiz-opt" onclick="selectOpt(this,3)"><span class="opt-icon">🛒</span>Yerel sabah pazarı</div>
+      </div>
+    </div>
+
+    <div class="quiz-step" data-step="1">
+      <div class="quiz-question">Seyahatte fotoğraf çekerken önceliğin ne?</div>
+      <div class="quiz-options">
+        <div class="quiz-opt" onclick="selectOpt(this,0)"><span class="opt-icon">🏟️</span>Mimari ve tarih</div>
+        <div class="quiz-opt" onclick="selectOpt(this,2)"><span class="opt-icon">📸</span>Yemek & estetik</div>
+        <div class="quiz-opt" onclick="selectOpt(this,3)"><span class="opt-icon">🤳</span>İnsan hikayeleri</div>
+        <div class="quiz-opt" onclick="selectOpt(this,1)"><span class="opt-icon">🌅</span>Doğa manzaraları</div>
+      </div>
+    </div>
+
+    <div class="quiz-step" data-step="2">
+      <div class="quiz-question">Öğle yemeği için bütçen serbest. Nereye gidersin?</div>
+      <div class="quiz-options">
+        <div class="quiz-opt" onclick="selectOpt(this,3)"><span class="opt-icon">🍲</span>Küçük lokanta</div>
+        <div class="quiz-opt" onclick="selectOpt(this,2)"><span class="opt-icon">🍽️</span>Manzaralı teras restoran</div>
+        <div class="quiz-opt" onclick="selectOpt(this,1)"><span class="opt-icon">🥗</span>Organik & sürdürülebilir</div>
+        <div class="quiz-opt" onclick="selectOpt(this,0)"><span class="opt-icon">🥙</span>Sokak lezzetleri turu</div>
+      </div>
+    </div>
+
+    <div class="quiz-step" data-step="3">
+      <div class="quiz-question">Seyahat konaklama tercihin?</div>
+      <div class="quiz-options">
+        <div class="quiz-opt" onclick="selectOpt(this,0)"><span class="opt-icon">🏠</span>Tarihi konak</div>
+        <div class="quiz-opt" onclick="selectOpt(this,2)"><span class="opt-icon">🛎️</span>Butik tasarım otel</div>
+        <div class="quiz-opt" onclick="selectOpt(this,3)"><span class="opt-icon">🏡</span>Aile pansiyonu</div>
+        <div class="quiz-opt" onclick="selectOpt(this,1)"><span class="opt-icon">⛺</span>Eko köy / kamp</div>
+      </div>
+    </div>
+
+    <div class="quiz-step" data-step="4">
+      <div class="quiz-question">Akşam programın ne olsun?</div>
+      <div class="quiz-options">
+        <div class="quiz-opt" onclick="selectOpt(this,3)"><span class="opt-icon">🎵</span>Canlı müzik</div>
+        <div class="quiz-opt" onclick="selectOpt(this,0)"><span class="opt-icon">🎨</span>Müze & sergi</div>
+        <div class="quiz-opt" onclick="selectOpt(this,1)"><span class="opt-icon">🌙</span>Doğada dinginlik</div>
+        <div class="quiz-opt" onclick="selectOpt(this,2)"><span class="opt-icon">🛍️</span>Çarşı & alışveriş</div>
+      </div>
+    </div>
+
+    <div class="btn-row" id="quizNav">
+      <button class="btn btn-secondary" id="btnPrev" onclick="quizPrev()" style="display:none">← Geri</button>
+      <button class="btn btn-primary" id="btnNext" onclick="quizNext()" disabled>Sonraki Soru →</button>
+    </div>
+  </div>
+
+  <div id="quizResult" style="display:none">
+    <div id="personaCard" class="persona-card"></div>
+    <div class="ai-box" id="quizAiBox" style="margin-top:24px">
+      <div class="ai-box-label">Akıllı Persona Analizi</div>
+      <div class="ai-box-content" id="quizAiContent">Analiz yükleniyor...</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-turq" onclick="goToRoutes()">Bu Persona ile Rota Oluştur →</button>
+      <button class="btn btn-secondary" onclick="resetQuiz()">Testi Tekrarla</button>
+    </div>
+  </div>
+</div>
+
+<div id="sec-routes" class="section">
+  <div class="section-title">🗺️ Kişilik Bazlı Rota Oluştur</div>
+  <div class="section-sub">Şehri seç, tercihlerini belirt — rotan anında hazır olsun</div>
+
+  <div class="field-group">
+    <label class="field-label">🏙️ Şehir Seç</label>
+    <div class="city-grid" id="cityGrid">
+      <div class="city-card" onclick="selectCity(this,'İstanbul')"><div class="city-icon">🕌</div><div class="city-name">İstanbul</div><div class="city-tag">Tarih · Kültür · Lezzet</div></div>
+      <div class="city-card" onclick="selectCity(this,'Kapadokya')"><div class="city-icon">🎈</div><div class="city-name">Kapadokya</div><div class="city-tag">Doğa · Macera · Mistik</div></div>
+      <div class="city-card" onclick="selectCity(this,'Mardin')"><div class="city-icon">🏛️</div><div class="city-name">Mardin</div><div class="city-tag">Tarihi Doku · Taş · Lezzet</div></div>
+      <div class="city-card" onclick="selectCity(this,'Trabzon')"><div class="city-icon">🌿</div><div class="city-name">Trabzon</div><div class="city-tag">Doğa · Yayla · Kültür</div></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="routePrefs">
+    <div class="field-group">
+      <label class="field-label">⏱️ Gezi Süresi</label>
+      <select id="routeDuration">
+        <option value="1">1 günlük gezi</option>
+        <option value="2">2-3 günlük hafta sonu</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label">💰 Bütçe</label>
+      <select id="routeBudget">
+        <option>Ekonomik (öğrenci dostu)</option>
+        <option>Orta bütçe</option>
+        <option>Konforlu</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label">🎯 İlgi Alanı</label>
+      <select id="routeInterest">
+        <option value="Kültür">Tarih & kültür</option>
+        <option value="Doğa">Doğa & aktif</option>
+        <option value="Gastro">Gastronomi</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label">👥 Kimlerle</label>
+      <select id="routeWho">
+        <option>Yalnız</option>
+        <option>Arkadaş grubu</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="btnRoute" onclick="generateRoute()">
+    ✨ Özelleştirilmiş Rotamı Oluştur
+  </button>
+
+  <div class="ai-box" id="routeAiBox" style="display:none;margin-top:24px">
+    <div class="ai-box-label">Kişisel Rotanız</div>
+    <div class="ai-box-content" id="routeAiContent"></div>
+  </div>
+</div>
+
+<div id="sec-missions" class="section">
+  <div class="section-title">🎯 Gizli Görev Sistemi</div>
+  <div class="section-sub">Şehirde görevleri tamamla, rozet kazan, puanını yükselt</div>
+
+  <div class="field-group">
+    <label class="field-label">Şehir seç</label>
+    <select id="missionCity" onchange="loadMissions()">
+      <option>İstanbul</option><option>Kapadokya</option><option>Mardin</option><option>Trabzon</option>
+    </select>
+  </div>
+
+  <div class="missions-grid" id="missionsGrid"></div>
+
+  <div style="margin-top:28px">
+    <button class="btn btn-turq" onclick="generateMissions()">🤖 Yeni Gizli Görev Listesi Üret</button>
+  </div>
+  <div class="ai-box" id="missionAiBox" style="display:none;margin-top:24px">
+    <div class="ai-box-label">Akıllı Gizli Görevler</div>
+    <div class="ai-box-content" id="missionAiContent"></div>
+  </div>
+</div>
+
+<div id="sec-live" class="section">
+  <div class="section-title">⚡ Anlık Durum Entegrasyonu</div>
+  <div class="section-sub">Şehirdeki anlık koşullara göre akıllı öneriler</div>
+
+  <div class="status-grid">
+    <div class="status-card">
+      <div><span class="status-dot green"></span><span class="status-label">Hava Durumu</span></div>
+      <div class="status-value" id="liveWeather">⛅ 24°C</div>
+      <div class="status-unit">Parçalı bulutlu</div>
+    </div>
+    <div class="status-card">
+      <div><span class="status-dot yellow"></span><span class="status-label">Kalabalık</span></div>
+      <div class="status-value" id="liveCrowd">%68</div>
+      <div class="status-unit">Orta yoğunluk</div>
+    </div>
+    <div class="status-card">
+      <div><span class="status-dot green"></span><span class="status-label">Etkinlik</span></div>
+      <div class="status-value">🎵 3</div>
+      <div class="status-unit">Aktif etkinlik</div>
+    </div>
+    <div class="status-card">
+      <div><span class="status-dot green"></span><span class="status-label">Ulaşım</span></div>
+      <div class="status-value">🚌 Normal</div>
+      <div class="status-unit">Düzenli sefer</div>
+    </div>
+  </div>
+
+  <div class="field-group">
+    <label class="field-label">📍 Şehir</label>
+    <select id="liveCity" onchange="updateLiveStatus()">
+      <option>İstanbul</option><option>Kapadokya</option><option>Mardin</option><option>Trabzon</option>
+    </select>
+  </div>
+  <div class="field-group">
+    <label class="field-label">🕐 Zaman dilimi</label>
+    <select id="liveTime">
+      <option value="Sabah">Sabah (08:00–12:00)</option>
+      <option value="Akşam">Akşam (18:00–22:00)</option>
+    </select>
+  </div>
+
+  <button class="btn btn-primary" onclick="generateLive()">⚡ Anlık Öneri Al</button>
+
+  <div class="ai-box" id="liveAiBox" style="display:none;margin-top:24px">
+    <div class="ai-box-label">Anlık Akıllı Öneri</div>
+    <div class="ai-box-content" id="liveAiContent"></div>
+  </div>
+</div>
+
+<div id="sec-reels" class="section">
+  <div class="section-title">🎬 Reels Rotası</div>
+  <div class="section-sub">İçerik üreticileri için çekim planı — konum, ışık, angle, caption</div>
+
+  <div class="reels-grid" id="reelsGrid">
+    <div class="reel-card selected" onclick="selectReel(this,'Mavi Saat')"><div class="reel-emoji">🌅</div><div class="reel-label">Mavi Saat</div><div class="reel-dur">Gün batımı</div></div>
+    <div class="reel-card" onclick="selectReel(this,'Gastronomi')"><div class="reel-emoji">🍽️</div><div class="reel-label">Gastronomi</div><div class="reel-dur">Öğle/akşam</div></div>
+    <div class="reel-card" onclick="selectReel(this,'Mimari')"><div class="reel-emoji">🏛️</div><div class="reel-label">Mimari</div><div class="reel-dur">Gün içi</div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="field-group">
+      <label class="field-label">📍 Şehir</label>
+      <select id="reelsCity">
+        <option>İstanbul</option><option>Kapadokya</option><option>Mardin</option><option>Trabzon</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label">📱 Platform</label>
+      <select id="reelsPlatform">
+        <option>Instagram Reels</option><option>TikTok</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="generateReels()">🎬 Çekim Planı Oluştur</button>
+
+  <div class="ai-box" id="reelsAiBox" style="display:none;margin-top:24px">
+    <div class="ai-box-label">Akıllı Çekim Planı</div>
+    <div class="ai-box-content" id="reelsAiContent"></div>
+  </div>
+</div>
+
+<div id="sec-eco" class="section">
+  <div class="section-title">🌿 Sürdürülebilir Turizm Skoru</div>
+  <div class="section-sub">Rotanın çevresel etkisini hesapla, eko-alternatifler keşfet</div>
+
+  <div class="eco-score-ring" id="ecoRing">
+    <div class="ring-wrap">
+      <svg width="100" height="100" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="40" fill="none" stroke="#e0ddd7" stroke-width="10"/>
+        <circle id="ecoRingCircle" cx="50" cy="50" r="40" fill="none" stroke="#1a6b6b" stroke-width="10"
+          stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round"/>
+      </svg>
+      <div class="ring-text"><div class="big" id="ecoScore">—</div><div class="small">/ 100</div></div>
+    </div>
+    <div class="eco-criteria">
+      <div class="eco-row"><span class="eco-label">Karbon Ayakizi</span><div class="eco-bar-wrap"><div class="eco-bar" id="ecoB1" style="width:0;background:#22c55e"></div></div><span class="eco-pct" id="ecoP1">—</span></div>
+      <div class="eco-row"><span class="eco-label">Yerel Destek</span><div class="eco-bar-wrap"><div class="eco-bar" id="ecoB2" style="width:0"></div></div><span class="eco-pct" id="ecoP2">—</span></div>
+      <div class="eco-row"><span class="eco-label">Kalabalık Kaçınma</span><div class="eco-bar-wrap"><div class="eco-bar" id="ecoB3" style="width:0"></div></div><span class="eco-pct" id="ecoP3">—</span></div>
+      <div class="eco-row"><span class="eco-label">Ulaşım Skoru</span><div class="eco-bar-wrap"><div class="eco-bar" id="ecoB4" style="width:0"></div></div><span class="eco-pct" id="ecoP4">—</span></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="field-group">
+      <label class="field-label">🚗 Ulaşım Tercihi</label>
+      <select id="ecoTransport">
+        <option>Uçak</option><option>Otobüs/Tren</option><option>Kişisel araç</option><option>Bisiklet/Yaya</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label">🏨 Konaklama</label>
+      <select id="ecoStay">
+        <option>Zincir otel</option><option>Butik otel</option><option>Aile pansiyonu</option><option>Eko-köy/camp</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label">📍 Destinasyon</label>
+      <select id="ecoCity">
+        <option>İstanbul</option><option>Kapadokya</option><option>Mardin</option><option>Trabzon</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label">⏱️ Süre</label>
+      <select id="ecoDuration">
+        <option>1 gün</option><option>2-3 gün</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="btn btn-turq" onclick="calculateEco()">🌿 Skor Hesapla</button>
+
+  <div class="ai-box" id="ecoAiBox" style="display:none;margin-top:24px">
+    <div class="ai-box-label">Eko-Öneri Raporu</div>
+    <div class="ai-box-content" id="ecoAiContent"></div>
+  </div>
+</div>
+
+<footer>
+  <strong>Türkiye Akıllı Şehir Rehberi</strong><br/>
+  <span style="font-size:.75rem;margin-top:8px;display:block">Proje: Derya Sıla &amp; Deniz Gurbet · Çankaya Üniversitesi Halkla İlişkiler &amp; Reklamcılık</span>
+</footer>
+
+<script>
+// Supabase Canlı Bağlantı Ayarları
+const SUPABASE_URL = 'https://mvkugmtxogfuytdoocnq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_y9MpXgJZvaxFPmR9aJbdHQ_1UIB4AwR'; // Sizin gizli anahtarınız
+
+// Veritabanı motorunu başlatma
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ═══════════════════════════════════════
+//  DEVASE VERİ HAVUZU (DATABASE)
+// ═══════════════════════════════════════
+const localDB = {
+  personas: [
+    { name: 'Kültür Avcısı 🏛️', sub: 'Tarihin izinde, her sokakta bir hikaye arayan gezgin', tags: ['Müze Tutkunu', 'Tarihi Dokular', 'Yerel Lezzetler'], analysis: '🔍 Harika bir Kültür Avcısısın! Seyahatlerinde derinlik, yaşanmışlık ve özgün hikayeler arıyorsun.\n\n💪 Güçlü Yönlerin: Detayları fark etme, yerel zanaatkarlarla bağ kurma ve kültürel mirasa saygı duyma.\n\n📍 En Uygun Şehirler: İstanbul (Tarihi Yarımada), Mardin, Safranbolu.\n\n💡 Tavsiye: Popüler turistik mekanlar yerine arka sokaklardaki eski antikacıları ve asırlık esnaf lokantalarını keşfet.' },
+    { name: 'Eko-Kaşif 🌿', sub: 'Doğayla uyumlu, sürdürülebilir iz bırakan gezgin', tags: ['Doğa', 'Sürdürülebilir', 'Yavaş Seyahat'], analysis: '🌲 Tam bir Eko-Kaşifsin! Çevreye duyarlı, doğanın ritmine ayak uyduran ve gittiği yerin ekolojisine katkı sunan bir tarzın var.\n\n💪 Güçlü Yönlerin: Karbon ayak izini minimumda tutma, yerel üreticiyi destekleme ve sakin seyahat felsefesi.\n\n📍 En Uygun Şehirler: Trabzon Yaylaları, Kapadokya (Vadiler), Kazdağları.\n\n💡 Tavsiye: Kamp alanlarını, eko-köyleri tercih etmeye devam et ve plastik atık üretmeyen yerel pazarları keşfet.' },
+    { name: 'Dijital Göçebe ✨', sub: 'Çalışırken gezen, estetiği yaşam biçimi haline getiren', tags: ['İçerik Üretici', 'Estetik', 'Kafe Kültürü'], analysis: '☕ Harika bir Dijital Göçebesin! Görsel estetiğe önem veriyor, şehrin modern dinamikleri ile kendi yaratıcılığını birleştiriyorsun.\n\n💪 Güçlü Yönlerin: Trendleri yakalama, harika kadrajlar bulma ve mekan tasarım analizi.\n\n📍 En Uygun Şehirler: İstanbul (Karaköy/Moda), İzmir (Alaçatı), Kaş.\n\n💡 Tavsiye: Üçüncü nesil kahvecilerin tasarım detaylarını incele ve yerel toplulukların çalışma alanlarına katıl.' },
+    { name: 'Gastro-Turist 🍽️', sub: 'Şehirleri sofralarından tanıyan lezzet avcısı', tags: ['Gastronomi', 'Sokak Lezzetleri', 'Yerel Esnaf'], analysis: '🍲 Muazzam bir Gastro-Turistsin! Senin için bir şehri anlamanın en iyi yolu mutfağından geçer.\n\n💪 Güçlü Yönlerin: Gurme damak tadı, gizli lezzet noktalarını keşfetme yeteneği, yerel tarif merakı.\n\n📍 En Uygun Şehirler: Gaziantep, Hatay, Mardin.\n\n💡 Tavsiye: Menülü büyük restoranlar yerine sadece tek bir üründe ustalaşmış küçük sokak tezgahlarını ve salaş lokantaları ara.' }
+  ],
+  routes: {
+    'İstanbul': {
+      'Kültür': '🕌 İSTANBUL TARİH VE KÜLTÜR ROTASI\n\n🌅 Sabah: Tarihi Yarımada ile başlayın. Sultanahmet Meydanı ve Ayasofya Camii ziyareti sonrası, kalabalıklardan önce Yerebatan Sarnıcı\'nın mistik atmosferine adım atın.\n\n☀️ Öğle: Kapalıçarşı\'nın tarihi hanlarında kaybolun. Yağlıkçılar Caddesi\'nde yürüyün. Öğle yemeği için asırlık Havuzlu Restoran\'da geleneksel Osmanlı saray mutfağını deneyin.\n\n🌆 Akşam: Eminönü\'nden vapurla Karaköy\'e geçin. Galata Kulesi\'ne çıkan yokuşta yürüyüp tarihi binaları fotoğraflayın. Galata Köprüsü üzerinde gün batımını izleyin.\n\n📍 Gizli Nokta: Süleymaniye Camii\'nin arka sokaklarındaki tarihi ahşap evler ve az bilinen Kubbe İstanbul teras noktası.\n\n💡 İpucu: Müze Kart edinerek kuyruklardan kurtulun ve ulaşımda sadece metroyu tercih edin.',
+      'Doğa': '🌿 İSTANBUL DOĞA VE BOĞAZ ROTASI\n\n🌅 Sabah: Emirgan Korusu\'nda doğanın içinde, boğaz manzaralı bir yürüyüş yapın. Ardından tarihi Sütiş\'te güzel bir kahvaltı keyfi yapın.\n\n☀️ Öğle: Rumeli Hisarı sahil hattından Bebek\'e doğru yürüyün. Deniz havasını içinize çekerek Arnavutköy ahşap yalılarını fotoğraflayın.\n\n🌆 Akşam: Atatürk Arboretumu\'na (Belgrad Ormanı yanı) giderek göl kenarında muazzam bitki çeşitliliği arasında dinginliği yaşayın.\n\n📍 Gizli Nokta: Anadolu Kavağı\'ndaki Yoros Kalesi kalıntıları; hem Karadeniz\'i hem Boğaz\'ı aynı anda en sakin görebileceğiniz yerdir.',
+      'Gastro': '🍽️ İSTANBUL GASTRONOMİ VE LEZZET ROTASI\n\n🌅 Sabah: Karaköy\'deki tarihi Namlı Gurme veya Tarihi Karaköy Poğaçacısı\'nda güne başlayın.\n\n☀️ Öğle: Eminönü\'ne geçip meşhur Tarihi Eminönü Balık Ekmekçisi\'nde veya esnafın gözdesi Şehzade Cağ Kebabı\'nda öğle yemeği yiyin. Üstüne Hafız Mustafa\'da kadayıf deneyin.\n\n🌆 Akşam: Kadıköy Moda\'ya vapurla geçin. Kadıköy Tarihi Çarşısı\'nda turlayıp Çiya Sofrası\'nda Anadolu\'nun unutulmuş yerel ot yemeklerini ve çorbalarını tadın.\n\n📍 Gizli Nokta: Vefa semtindeki asırlık Tarihi Vefa Bozacısı\'nda leblebili boza molası.'
+    },
+    'Kapadokya': {
+      'Kültür': '🎈 KAPADOKYA MİSTİK KÜLTÜR ROTASI\n\n🌅 Sabah: Göreme Açık Hava Müzesi\'ndeki kayalara oyulmuş erken dönem Hristiyan kiliselerini ve harika freskleri rehber eşliğinde gezin.\n\n☀️ Öğle: Avanos\'a geçerek Kızılırmak kenarında yürüyün. Tarihi bir yeraltı çömlek atölyesinde (Körükçü) çömlek yapımını ustasından izleyin ve kendiniz deneyin.\n\n🌆 Akşam: Uçhisar Kalesi\'ne çıkın. Tüm Kapadokya coğrafyasını kuş bakışı gören bu devasa kaya kütlesinde güneşin batışını izleyin.\n\n📍 Gizli Nokta: Çavuşin köyünün eski yıkık üst yamacındaki kiliseler ve az bilinen eski yerleşim mağaraları.',
+      'Doğa': '🌄 KAPADOKYA DOĞA VE MACERA ROTASI\n\n🌅 Sabah: Gün doğumu saatinde Kızılvadi (Red Valley)\'de yürüyüşe başlayın. Gökyüzünde yükselen yüzlerce rengarenk balonu vadinin içinden izleyin.\n\n☀️ Öğle: Ihlara Vadisi\'ne doğru yola çıkın. Melendiz Çayı kenarında, ağaçların gölgesinde 4 kilometrelik doğa yürüyüşü yapın ve su üzerindeki çardaklarda mola verin.\n\n🌆 Akşam: Aşk Vadisi\'nde (Love Valley) gün batımında ATV turuna katılın veya ata binerek peri bacalarının arasında özgürce gezinin.\n\n📍 Gizli Nokta: Güvercinlik Vadisi\'nin derinliklerinde bulunan, sadece yerel yürüyüşçülerin bildiği gizli kaya şelalesi.'
+    },
+    'Mardin': {
+      'Kültür': '🏛️ MARDİN TAŞ VE KÜLTÜR ROTASI\n\n🌅 Sabah: Deyrulzafaran Manastırı\'nın asırlık taş koridorlarında Süryani kültürünün tarihini soluyun. Ardından Kasımiye Medresesi\'ne geçip hayat havuzunun felsefesini dinleyin.\n\n☀️ Öğle: Eski Mardin sokaklarındaki (Abbaralar altından geçerek) Ulu Cami\'ye yürüyün. Öğle yemeğinde Cercis Murat Konağı\'nda yerel Mardin tabağı (İrok, Sembusek) deneyin.\n\n🌆 Akşam: Tarihi Kayseriyye Çarşısı\'nda gümüş telkari ustalarını izleyin. Akşam mavi saatlerde Mezopotamya Ovası\'na bakan bir taş terasta Süryani şarabı veya mırra kahvesi için.\n\n📍 Gizli Nokta: Eski Mardin\'in en dar, turistin hiç girmediği, çocukların güler yüzle karşıladığı el değmemiş arka sokak abbaraları.'
+    },
+    'Trabzon': {
+      'Doğa': '🌿 TRABZON VE KARADENİZ DOĞA ROTASI\n\n🌅 Sabah: Erken saatte Maçka Sümela Manastırı\'na çıkın. Karadeniz sisinin çam ağaçları arasından süzülüşünü ve sarp kayaya kurulu manastırı izleyin.\n\n☀️ Öğle: Hamsiköy\'e uğrayıp meşhur fırın sütlacı ile enerji toplayın. Ardından orman yollarından geçerek Uzungöl\'ün üst kısmında yer alan Karester Yaylası\'na çıkın.\n\n🌆 Akşam: Akçaabat sahiline inin. Meşhur Akçaabat Köftesi ve Saray Helvası ile günü doğanın kucağında dingin bir akşam yemeğiyle kapatın.\n\n📍 Gizli Nokta: Uzungöl\'ün kalabalığından uzakta, dağların zirvesine gizlenmiş, bulut denizi manzaralı Haldizen Yaylası.'
+    }
+  },
+  missions: {
+    'İstanbul': [
+      { icon:'🕌', title:'Sabah Ezanı Anı', desc:'Sabah ezanı okunurken Tarihi Yarımada\'da bir noktada ol ve o anı fotoğrafla.', pts:'150 puan', type:'gold' },
+      { icon:'🐟', title:'Balık Ekmek Ritüeli', desc:'Galata Köprüsü altında balık ekmek ye, satıcıyla sıcak bir esnaf sohbeti et.', pts:'100 puan', type:'' },
+      { icon:'🏺', title:'Büyük Çarşı Gizi', desc:'Kapalıçarşı\'da 5 farklı antikacı veya zanaat ustasını bul ve hikayelerini öğren.', pts:'200 puan', type:'red' },
+      { icon:'🌇', title:'İki Kıta Manzarası', desc:'Gün batımında hem Avrupa hem Asya yakasını aynı kadraja alabileceğin bir açıda dur.', pts:'120 puan', type:'' },
+    ],
+    'Kapadokya': [
+      { icon:'🌄', title:'Şafak Karşılaması', desc:'Güneş doğmadan önce Gözleme Tepesi\'nde yerini al ve yükselen balonları selamla.', pts:'200 puan', type:'gold' },
+      { icon:'⛏️', title:'Yeraltı Kaşifi', desc:'Derinkuyu yeraltı şehrinde heyecan dolu bir keşfe çık ve en derin odaya kadar in.', pts:'180 puan', type:'red' },
+      { icon:'🏺', title:'Çömlek Çarkı Ustası', desc:'Avanos\'ta çömlek tezgahının başına geçerek killi çamurdan kendi ilk eserini üret.', pts:'150 puan', type:'' },
+    ],
+    'Mardin': [
+      { icon:'🏛️', title:'Mezopotamya Kadrajı', desc:'Bir taş konağın terasından Mezopotamya Ovası\'nı sonsuzluk hissiyle fotoğrafla.', pts:'150 puan', type:'gold' },
+      { icon:'☕', title:'Mırra Deneyimi', desc:'Yerel bir kahvehanede geleneksel kulpsuz fincanla ikram edilen mırrayı deneyimle.', pts:'100 puan', type:'' },
+    ],
+    'Trabzon': [
+      { icon:'🌿', title:'Sis Avcısı', desc:'Sümela Manastırı yamaçlarında ormanı kaplayan Karadeniz sisini en iyi açıyla yakala.', pts:'150 puan', type:'gold' },
+      { icon:'🍲', title:'Kuymak Uzatma', desc:'Yerel bir yayla lokantasında sıcacık kuymağı en az yarım metre uzatarak fotoğrafla.', pts:'120 puan', type:'' },
+    ]
+  },
+  reels: {
+    'Mavi Saat': {
+      title: '🌅 Mavi Saat & Altın Işık Sinematik Çekim Planı',
+      content: '📍 Çekim Lokasyonları: Şehrin en yüksek tarihi kulesi, terasa sahip taş konaklar veya sahil iskele hatları.\n⏰ İdeal Çekim Saati: Gün batımından tam 20 dakika öncesi ve sonrası.\n📷 Açı ve Kompozisyon: Geniş açı sinematik yavaş yürüyüş kadrajları, ters ışık silüet geçişleri.\n🎵 Önerilen Müzik: Etnik / Modern Chill dalgalı enstrümantal fon sesleri.\n✍️ Caption Seçenekleri:\n1. "Bu şehre güneşin veda ettiği anı izlemek... 🌆"\n2. "Zamanın durduğu o büyülü dakikalar."\n🏷️ Hashtagler: #travelreels #m视界 #sinematik #kesfet #turkiyeninrenkleri'
+    },
+    'Gastronomi': {
+      title: '🍽️ Gastronomi Makro Lezzet Çekim Planı',
+      content: '📍 Çekim Lokasyonları: Dumanı tüten esnaf lokantaları, sokak tezgahları, taş fırınların önü.\n⏰ İdeal Çekim Saati: Öğle saatleri (12:00 - 14:00) doğal tepe ışığı.\n📷 Açı ve Kompozisyon: 2x veya 3x yakın zoom (macro) çekimler. Yemeğin dumanının tütmesi, sosun dökülme anı akıcı ağır çekim.\n🎵 Önerilen Müzik: Eğlenceli, ritmik, ASMR odaklı bıçak ve çatal sesleriyle uyumlu müzikler.\n✍️ Caption Seçenekleri:\n1. "Diyeti bu videoda bırakıyoruz... Mutfak sırları! 🤤"\n2. "Bu lezzeti yerinde denemediysen çok şey kaçırmışsın demektir."\n🏷️ Hashtagler: #foodreels #gourmet #lezzetduragi #sokaklezzetleri #kesfetteyiz'
+    },
+    'Mimari': {
+      title: '🏛️ Mimari & Estetik Detay Çekim Planı',
+      content: '📍 Çekim Lokasyonları: Tarihi dar sokaklar, taş oymalı kapı eşikleri, eski cami/kilise kubbeleri.\n⏰ İdeal Çekim Saati: Sabah erken saatler (08:00 - 10:00) gölgesiz berrak ışık.\n📷 Açı ve Kompozisyon: Simetrik alt açı çekimleri, kamerayı yukarı doğru çevirme (tilt-up) hareketleri.\n🎵 Önerilen Müzik: Klasik piyano tınıları veya derin ambient sesler.\n✍️ Caption Seçenekleri:\n1. "Taşların dili olsaydı bize ne anlatırdı? 🏛️"\n2. "Yüzyılların estetiği bu sokaklarda gizli."\n🏷️ Hashtagler: #architecture #historicalplace #estetik #artofvisuals'
+    }
+  },
+  live: {
+    'İstanbul': {
+      'Sabah': '⚡ Öneri: Şu an Eminönü-Karaköy vapuruna binip martılara simit atmak için en tatlı hava (Esinti hafif, sakin).\n⚠️ Kaçın: Metrobüs hatları ve turnike bölgeleri şu an aşırı yoğun.\n🍽️ Mekan: Tarihi Galata Şekercisi yanındaki küçük butik çay ocağı.\n🎯 Gizli: Kadıköy Moda sahil kayalıklarının en uç sapa kısmı sabahları bomboştur.',
+      'Akşam': '⚡ Öneri: Galata Köprüsü üzerinde balık tutanları izleyerek Karaköy sahilde yürüyüş yapın. Işıklar harika.\n⚠️ Kaçın: İstiklal Caddesi şu an iğne atsan yere düşmez kıvamda kalabalık.\n🍽️ Mekan: Çarşı içindeki salaş ama leziz dürümcüler.\n🎯 Gizli: Süleymaniye\'nin arka sokaklarındaki saklı çatı katı kafeleri gece harika bir boğaz ışığı sunar.'
+    },
+    'Kapadokya': {
+      'Sabah': '⚡ Öneri: Vadilere sis çöküyor, aşk vadisinde yürüyüş için muazzam serin bir hava.\n⚠️ Kaçın: Ana seyir tepesi araç trafiği yüzünden tıkalı olabilir.\n🍽️ Mekan: Göreme köy meydanındaki yerel çorbacı.\n🎯 Gizli: Ortahisar kalesinin arka patika yolu.'
+    }
+  }
+};
+
+// ═══════════════════════════════════════
+//  STATE MANAGEMENT
+// ═══════════════════════════════════════
+let quizAnswers = [0, 0, 0, 0, 0];
+let currentQuizStep = 0;
+let selectedCity = '';
+let selectedReel = 'Mavi Saat';
+const TOTAL_STEPS = 5;
+
+// ═══════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════
+function showSection(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-links button').forEach(b => b.classList.remove('active'));
+  
+  const targetSec = document.getElementById('sec-' + id);
+  if(targetSec) targetSec.classList.add('active');
+  
+  if (btn) btn.classList.add('active');
+  if (id === 'missions') loadMissions();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════
+//  TYPEWRITER EFFECT (Simulated AI Engine)
+// ═══════════════════════════════════════
+function simulateAiTypewriter(text, contentEl, callback) {
+  contentEl.textContent = '';
+  let i = 0;
+  const cursor = document.createElement('span');
+  cursor.className = 'typing-cursor';
+  contentEl.appendChild(cursor);
+  
+  const interval = setInterval(() => {
+    if (i < text.length) {
+      contentEl.insertBefore(document.createTextNode(text[i]), cursor);
+      i++;
+    } else {
+      clearInterval(interval);
+      cursor.remove();
+      if(callback) callback();
+    }
+  }, 4); // Işık hızında akıcı yazı efekti
+}
+
+// ═══════════════════════════════════════
+//  QUIZ LOGIC
+// ═══════════════════════════════════════
+function selectOpt(el, scoreIndex) {
+  el.closest('.quiz-options').querySelectorAll('.quiz-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  quizAnswers[currentQuizStep] = scoreIndex;
+  document.getElementById('btnNext').disabled = false;
+}
+
+function updateProgress() {
+  document.querySelectorAll('.quiz-dot').forEach((d, i) => {
+    d.classList.toggle('done', i <= currentQuizStep);
+  });
+}
+
+function quizNext() {
+  if (currentQuizStep < TOTAL_STEPS - 1) {
+    document.querySelector(`.quiz-step[data-step="${currentQuizStep}"]`).classList.remove('active');
+    currentQuizStep++;
+    document.querySelector(`.quiz-step[data-step="${currentQuizStep}"]`).classList.add('active');
+    document.getElementById('btnPrev').style.display = 'inline-flex';
+    document.getElementById('btnNext').disabled = true;
+    document.getElementById('btnNext').textContent = currentQuizStep === TOTAL_STEPS - 1 ? 'Sonuçları Analiz Et 🎉' : 'Sonraki Soru →';
+    updateProgress();
+  } else {
+    showQuizResult();
+  }
+}
+
+function quizPrev() {
+  if (currentQuizStep > 0) {
+    document.querySelector(`.quiz-step[data-step="${currentQuizStep}"]`).classList.remove('active');
+    currentQuizStep--;
+    document.querySelector(`.quiz-step[data-step="${currentQuizStep}"]`).classList.add('active');
+    if (currentQuizStep === 0) document.getElementById('btnPrev').style.display = 'none';
+    document.getElementById('btnNext').disabled = false;
+    document.getElementById('btnNext').textContent = 'Sonraki Soru →';
+    updateProgress();
+  }
+}
+
+function showQuizResult() {
+  document.getElementById('quizContainer').style.display = 'none';
+  document.getElementById('quizResult').style.display = 'block';
+
+  // Çoğunluk oyun indeksine göre akıllı persona seçimi
+  const counts = {};
+  let maxIndex = quizAnswers[0];
+  let maxCount = 1;
+  for(let i = 0; i<quizAnswers.length; i++){
+    const val = quizAnswers[i];
+    counts[val] = (counts[val] || 0) + 1;
+    if(counts[val] > maxCount){
+      maxCount = counts[val];
+      maxIndex = val;
+    }
+  }
+
+  const personaData = localDB.personas[maxIndex] || localDB.personas[0];
+  
+  document.getElementById('personaCard').innerHTML = `
+    <div class="persona-name">${personaData.name}</div>
+    <div class="persona-sub">${personaData.sub}</div>
+    <div class="persona-tags">${personaData.tags.map(t => `<span class="persona-tag">${t}</span>`).join('')}</div>
+  `;
+
+  const box = document.getElementById('quizAiBox');
+  box.style.display = 'block';
+  
+  simulateAiTypewriter(personaData.analysis, document.getElementById('quizAiContent'));
+}
+
+function resetQuiz() {
+  currentQuizStep = 0;
+  quizAnswers = [0,0,0,0,0];
+  document.querySelectorAll('.quiz-step').forEach((s,i) => { s.classList.toggle('active', i===0); });
+  document.querySelectorAll('.quiz-opt').forEach(o => o.classList.remove('selected'));
+  document.querySelectorAll('.quiz-dot').forEach(d => d.classList.remove('done'));
+  document.getElementById('btnPrev').style.display = 'none';
+  document.getElementById('btnNext').disabled = true;
+  document.getElementById('btnNext').textContent = 'Sonraki Soru →';
+  document.getElementById('quizContainer').style.display = 'block';
+  document.getElementById('quizResult').style.display = 'none';
+}
+
+function goToRoutes() {
+  showSection('routes', document.querySelector('.nav-links button:nth-child(3)'));
+}
+
+// ═══════════════════════════════════════
+//  ROUTE GENERATION
+// ═══════════════════════════════════════
+function selectCity(el, city) {
+  document.querySelectorAll('.city-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCity = city;
+}
+
+function generateRoute() {
+  if (!selectedCity) { alert('Lütfen listeden bir şehir seçin!'); return; }
+  
+  const btn = document.getElementById('btnRoute');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Algoritma Çalışıyor...';
+
+  const box = document.getElementById('routeAiBox');
+  box.style.display = 'block';
+
+  const interest = document.getElementById('routeInterest').value;
+  
+  // Şehir ve ilgi alanına göre data eşleme (Yoksa fallback kültüre döner)
+  let cityData = localDB.routes[selectedCity];
+  let finalText = cityData ? (cityData[interest] || cityData['Kültür']) : 'Seçtiğiniz kriterlere uygun özel rota verisi hazırlandı.\n📍 Gezi planı adımlarını takip edebilirsiniz.';
+
+  setTimeout(() => {
+    simulateAiTypewriter(finalText, document.getElementById('routeAiContent'), () => {
+      btn.disabled = false;
+      btn.innerHTML = '✨ Özelleştirilmiş Rotamı Oluştur';
+    });
+  }, 600);
+}
+
+// ═══════════════════════════════════════
+//  MISSIONS LOGIC
+// ═══════════════════════════════════════
+function loadMissions() {
+  const city = document.getElementById('missionCity').value;
+  const missions = localDB.missions[city] || localDB.missions['İstanbul'];
+  const grid = document.getElementById('missionsGrid');
+  grid.innerHTML = missions.map(m => `
+    <div class="mission-card ${m.type}">
+      <div class="mission-badge">AKTİF</div>
+      <div class="mission-icon">${m.icon}</div>
+      <div class="mission-title">${m.title}</div>
+      <div class="mission-desc">${m.desc}</div>
+      <div class="mission-pts">+${m.pts}</div>
+    </div>
+  `).join('');
+}
+
+function generateMissions() {
+  const city = document.getElementById('missionCity').value;
+  const box = document.getElementById('missionAiBox');
+  box.style.display = 'block';
+  
+  let customText = `🤖 ${city} Şehri İçin Üretilen Yeni Algoritmik Görevler:\n\n`;
+  const list = localDB.missions[city] || localDB.missions['İstanbul'];
+  list.forEach((m, idx) => {
+    customText += `${m.icon} Görev ${idx+1}: ${m.title} - ${m.desc} (${m.pts})\n\n`;
+  });
+
+  simulateAiTypewriter(customText, document.getElementById('missionAiContent'));
+}
+
+// ═══════════════════════════════════════
+//  LIVE MONITORING
+// ═══════════════════════════════════════
+function updateLiveStatus() {
+  const city = document.getElementById('liveCity').value;
+  const weatherEl = document.getElementById('liveWeather');
+  const crowdEl = document.getElementById('liveCrowd');
+  
+  if(city === 'İstanbul') {
+    weatherEl.textContent = '⛅ 24°C'; crowdEl.textContent = '%68';
+  } else if(city === 'Kapadokya') {
+    weatherEl.textContent = '☀️ 19°C'; crowdEl.textContent = '%32';
+  } else {
+    weatherEl.textContent = '🌤️ 22°C'; crowdEl.textContent = '%45';
+  }
+}
+
+function generateLive() {
+  const city = document.getElementById('liveCity').value;
+  const time = document.getElementById('liveTime').value;
+  const box = document.getElementById('liveAiBox');
+  box.style.display = 'block';
+
+  let liveText = localDB.live[city]?.[time] || `⚡ Öneri: Şu an ${city} sokaklarında keşif yürüyüşü yapmak için hava oldukça elverişli.\n⚠️ Kaçın: Merkez ana caddeler şu an kalabalık olabilir.\n🍽️ Mekan: Çarşı meydanındaki yerel çay evleri.`;
+  
+  simulateAiTypewriter(liveText, document.getElementById('liveAiContent'));
+}
+
+// ═══════════════════════════════════════
+//  REELS PLANNER
+// ═══════════════════════════════════════
+function selectReel(el, type) {
+  document.querySelectorAll('.reel-card').forEach(r => r.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedReel = type;
+}
+
+function generateReels() {
+  const city = document.getElementById('reelsCity').value;
+  const box = document.getElementById('reelsAiBox');
+  box.style.display = 'block';
+
+  let data = localDB.reels[selectedReel] || localDB.reels['Mavi Saat'];
+  let planText = `🎬 ODAK ŞEHİR: ${city}\n\n${data.title}\n\n${data.content}`;
+
+  simulateAiTypewriter(planText, document.getElementById('reelsAiContent'));
+}
+
+// ═══════════════════════════════════════
+//  SUSTAINABILITY SCORE
+// ═══════════════════════════════════════
+function calculateEco() {
+  const transport = document.getElementById('ecoTransport').value;
+  const stay = document.getElementById('ecoStay').value;
+  const city = document.getElementById('ecoCity').value;
+  const duration = document.getElementById('ecoDuration').value;
+
+  const tScores = { 'Uçak': 20, 'Kişisel araç': 35, 'Otobüs/Tren': 75, 'Bisiklet/Yaya': 100 };
+  const sScores = { 'Zincir otel': 40, 'Butik otel': 60, 'Aile pansiyonu': 80, 'Eko-köy/camp': 100 };
+  
+  const t = tScores[transport] || 50;
+  const s = sScores[stay] || 50;
+  const crowd = (city === 'İstanbul') ? 40 : 80;
+  const total = Math.round((t * 0.4 + s * 0.25 + crowd * 0.2 + 70 * 0.15));
+
+  document.getElementById('ecoScore').textContent = total;
+  const offset = 251.2 - (251.2 * total / 100);
+  
+  const circle = document.getElementById('ecoRingCircle');
+  circle.style.strokeDashoffset = offset;
+  circle.style.stroke = total >= 70 ? '#22c55e' : total >= 40 ? '#eab308' : '#ef4444';
+
+  const bars = [[100-t, 'ecoB1','ecoP1'], [s,'ecoB2','ecoP2'], [crowd,'ecoB3','ecoP3'], [70,'ecoB4','ecoP4']];
+  bars.forEach(([v,bid,pid]) => {
+    document.getElementById(bid).style.width = v + '%';
+    document.getElementById(pid).textContent = v + '%';
+  });
+
+  const box = document.getElementById('ecoAiBox');
+  box.style.display = 'block';
+
+  let reportText = `🌿 SÜRDÜRÜLEBİLİRLİK RAPORU ÖZETİ\n\n💚 Genel Puan Değerlendirmesi: ${total}/100\n\n♻️ Önemli İyileştirme Önerileri:\n1. Ulaşımda karbon ayak izinizi azaltmak adına toplu taşıma veya bisiklet hatlarını daha sık kullanabilirsiniz.\n2. Konaklamada yerel aile pansiyonlarını seçerek mikro-ekonomiyi doğrudan destekleyebilirsiniz.\n3. Yerel esnaftan alışveriş yaparak paketleme atıklarını azaltın.`;
+
+  simulateAiTypewriter(reportText, document.getElementById('ecoAiContent'));
+}
+
+// ═══════════════════════════════════════
+//  INITIALIZATION
+// ═══════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  loadMissions();
+});
+</script>
+</body>
+</html>
