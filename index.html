@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Türkiye Şehir Rehberi</title>
@@ -694,6 +695,12 @@
 </footer>
 
 <script>
+// Supabase Canlı Bağlantı Ayarları
+const SUPABASE_URL = 'https://mvkugmtxogfuytdoocnq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_y9MpXgJZvaxFPmR9aJbdHQ_1UIB4AwR'; // Sizin gizli anahtarınız
+
+// Veritabanı motorunu başlatma
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // ═══════════════════════════════════════
 //  DEVASE VERİ HAVUZU (DATABASE)
 // ═══════════════════════════════════════
